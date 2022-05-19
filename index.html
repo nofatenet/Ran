@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ran</title>
+
+    <style>
+
+        body{
+            background-color: #000;
+        }
+        #canvas1{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #333;
+        }
+        #playerImage, #backgroundImage, #enemyImage{
+            display: none;
+        }
+
+    </style>
+
+</head>
+<body>
+    <canvas id="canvas1"></canvas>
+    <img id="playerImage" src="./player_ft.png">
+    <img id="backgroundImage" src="./background_ft.png">
+    <img id="enemyImage" src="./enemy_ft.png">
+
+    <script>
+
+window.addEventListener("load", () => {
+    const canvasDom = document.querySelector("#canvas1");
+    const ctx = canvasDom.getContext('2d');
+    canvasDom.width = 800;
+    canvasDom.height = 600;
+
+    class InputHandler {
+        constructor(){
+            this.keys = []; //have an array of keys, so multiple keys can be pressed at same time
+            
+            window.addEventListener("keydown", (evt) => {
+                if (
+                    (
+                        evt.key === "ArrowDown" ||
+                        evt.key === "ArrowUp"   ||
+                        evt.key === "ArrowLeft" ||
+                        evt.key === "ArrowRight"
+                    )
+                    && this.keys.indexOf(evt.key) === -1)
+                {
+                    this.keys.push(evt.key) //add to array ... if not already present
+                };
+                //console.log(evt.key, this.keys);
+            });
+
+            window.addEventListener("keyup", (evt) => {
+                if (
+                    (
+                        evt.key === "ArrowDown" ||
+                        evt.key === "ArrowUp"   ||
+                        evt.key === "ArrowLeft" ||
+                        evt.key === "ArrowRight"
+                    )
+                )
+                {
+                    this.keys.splice(this.keys.indexOf(evt.key), 1) //remove from array
+                };
+                //console.log(evt.key, this.keys);
+            });
+
+        };
+
+    };
+
+    class Player {
+        constructor(gameWidth, gameHeight){
+            this.gameWidth = gameWidth;
+            this.gameHeight = gameHeight;
+            this.width = 200;
+            this.height = 216;
+            this.x = 64;
+            this.y = this.gameHeight - this.height;
+            this.image = document.getElementById("playerImage");
+            this.frameX = 0;
+            this.frameY = 0;
+            this.speed = 0;
+            this.velocityY = 0;
+            this.weight = 1;
+        }
+        draw(context){
+            context.fillStyle = "rgba(90, 60, 90, 0.0)";
+            context.fillRect(this.x, this.y, this.width, this.height);
+            context.drawImage(this.image, this.frameX* this.width, this.frameY* this.height, this.width, this.height, this.x, this.y, this.width, this.height);
+        }
+        update(input){
+            // Controls:
+            if (input.keys.indexOf("ArrowRight") > -1) {
+                this.speed = 5;
+            } else if (input.keys.indexOf("ArrowLeft") > -1) {
+                this.speed = -5;
+            } else if (input.keys.indexOf("ArrowUp") > -1 && this.onGround()) {
+                this.velocityY -= 23;
+            } else {
+                this.speed = 0;
+            }
+            // Game Area Limits:
+            this.x += this.speed;
+            if (this.x < 0) this.x = 0;
+            else if (this.x > this.gameWidth - this.width) this.x = this.gameWidth - this.width;
+            // Vertical:
+            this.y += this.velocityY;
+            if (!this.onGround()) {
+                this.velocityY += this.weight;
+                this.frameY = 1;
+            } else {
+                this.velocityY = 0;
+                this.frameY = 0;
+            }
+            //Stop from falling though the Ground:
+            if (this.y > this.gameHeight - this.height) this.y = this.gameHeight - this.height;
+        }
+        onGround(){
+            return this.y >= this.gameHeight - this.height;
+        }
+    };
+
+    class Background {
+        constructor(gameWidth, gameHeight){
+            this.gameWidth = gameWidth;
+            this.gameHeight = gameHeight;
+            this.image = document.getElementById("backgroundImage");
+            this.x = 0;
+            this.y = 0;
+            this.width = 2400;
+            this.height = 720;
+            this.scrollSpeed = 4;
+        }
+        draw(context){
+            context.drawImage(this.image, this.x, this.y, this.width, this.height);
+            context.drawImage(this.image, this.x + this.width, this.y, this.width, this.height);
+        }
+        update(){
+            this.x -= this.scrollSpeed;
+
+            if(this.x < 0 - this.width) this.x = 0; //reset the image for infinite scroll...
+        }
+    };
+
+    class Enemy {
+
+    };
+
+    const handleEnemies = () => {
+
+    };
+
+    const displayStatusText = () => {
+
+    };
+
+    const input = new InputHandler();
+    const player = new Player(canvasDom.width, canvasDom.height);
+    const background = new Background(canvasDom.width, canvasDom.height);
+
+    const animate = () => {
+        ctx.clearRect(0, 0, canvasDom.width, canvasDom.height); // clear all frames from canvas that were before current. see what it's like without it!
+        
+        background.draw(ctx);
+        background.update();
+        player.draw(ctx);
+        player.update(input);
+
+
+        requestAnimationFrame(animate);
+    };
+
+    animate();
+
+});
+
+
+    </script>
+</body>
+
+</html>
