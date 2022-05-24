@@ -38,6 +38,7 @@ window.addEventListener("load", () => {
     const ctx = canvasDom.getContext('2d');
     canvasDom.width = 800;
     canvasDom.height = 600;
+    let enemies = [];
 
     class InputHandler {
         constructor(){
@@ -88,16 +89,32 @@ window.addEventListener("load", () => {
             this.image = document.getElementById("playerImage");
             this.frameX = 0;
             this.frameY = 0;
+            this.maxFrame = 7;
+            this.fps = 14;
+            this.frameTimer = 0;
+            this.frameInterval = 1000/this.fps;
             this.speed = 0;
             this.velocityY = 0;
             this.weight = 1;
         }
         draw(context){
-            context.fillStyle = "rgba(90, 60, 90, 0.0)";
-            context.fillRect(this.x, this.y, this.width, this.height);
-            context.drawImage(this.image, this.frameX* this.width, this.frameY* this.height, this.width, this.height, this.x, this.y, this.width, this.height);
+            //context.fillStyle = "rgba(90, 60, 90, 0.0)";
+            //context.fillRect(this.x, this.y, this.width, this.height);
+            context.drawImage(this.image, this.frameX* this.width, this.frameY* this.height, this.width, this.height,
+            this.x, this.y, this.width, this.height);
         }
-        update(input){
+        update(input, deltaTime){
+            //Sprite Animation:
+            if (this.frameTimer > this.frameInterval){
+                if(this.frameX >= this.maxFrame) this.frameX = 0;
+                else this.frameX ++;
+                this.frameTimer = 0;
+            } else {
+                this.frameTimer += deltaTime;
+            }
+
+
+
             // Controls:
             if (input.keys.indexOf("ArrowRight") > -1) {
                 this.speed = 5;
@@ -152,11 +169,50 @@ window.addEventListener("load", () => {
     };
 
     class Enemy {
+        constructor(gameWidth, gameHeight){
+            this.gameWidth = gameWidth;
+            this.gameHeight = gameHeight;
+            this.width = 160;
+            this.height = 119;
+            this.image = document.getElementById("enemyImage");
+            this.x = this.gameWidth;
+            this.y = this.gameHeight - this.height;
+            this.frameX = 0;
+            this.maxFrame = 5;
+            this.fps = 20;
+            this.frameTimer = 0;
+            this.frameInterval = 1000/this.fps;
+            this.speed = 8;
+        }
+        draw(context){
+            context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height,
+            this.x, this.y, this.width, this.height);
+        }
+        update(deltaTime){
+            if (this.frameTimer > this.frameInterval){
+                if(this.frameX >= this.maxFrame) this.frameX = 0;
+                else this.frameX++;
+                this.frameTimer = 0;
+            } else {
+                this.frameTimer += deltaTime;
+            }
 
+            this.x -= this.speed;
+        }
     };
 
-    const handleEnemies = () => {
-
+    const handleEnemies = (deltaTime) => {
+        if(enemyTimer > enemyInterval + Randomizer){
+            enemies.push(new Enemy(canvasDom.width, canvasDom.height));
+            enemyTimer = 0; //Reset Timer
+            Randomizer = Math.random() * 2000 + 200; //Reset Random Timer
+        } else {
+            enemyTimer += deltaTime;
+        }
+        enemies.forEach(enemy => {
+            enemy.draw(ctx);
+            enemy.update();
+        })
     };
 
     const displayStatusText = () => {
@@ -167,19 +223,29 @@ window.addEventListener("load", () => {
     const player = new Player(canvasDom.width, canvasDom.height);
     const background = new Background(canvasDom.width, canvasDom.height);
 
-    const animate = () => {
+    let lastTime = 0;
+    let enemyTimer = 0;
+    let enemyInterval = 200; //Add new Enemy every ...ms
+    let Randomizer = Math.random() * 2000 + 200;
+
+    const animate = (timeStamp) => {
+        const deltaTime = timeStamp - lastTime; // delta is the difference of time passed. In FPS Time.
+        lastTime = timeStamp;
+        //console.log(deltaTime); //See, when you have 60FPS, there is a new frame about every 16ms.
         ctx.clearRect(0, 0, canvasDom.width, canvasDom.height); // clear all frames from canvas that were before current. see what it's like without it!
         
         background.draw(ctx);
         background.update();
-        player.draw(ctx);
-        player.update(input);
 
+        player.draw(ctx);
+        player.update(input,deltaTime);
+
+        //handleEnemies(deltaTime);
 
         requestAnimationFrame(animate);
     };
 
-    animate();
+    animate(0);
 
 });
 
