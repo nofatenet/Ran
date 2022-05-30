@@ -21,6 +21,11 @@
         #playerImage, #backgroundImage, #enemyImage{
             display: none;
         }
+        p{
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            color: #999;
+            font-size: 10px;
+        }
 
     </style>
 
@@ -32,6 +37,7 @@
     <img id="enemyImage" src="./enemy_ft.png">
 
     <script>
+        // Repo: https://github.com/nofatenet/Ran/
 
 window.addEventListener("load", () => {
     const canvasDom = document.querySelector("#canvas1");
@@ -40,6 +46,8 @@ window.addEventListener("load", () => {
     canvasDom.height = 600;
     let enemies = [];
     let score = 0;
+    let distScore = 0;
+    let performance = 0;
     let gameOver = false;
 
     class InputHandler {
@@ -223,13 +231,16 @@ window.addEventListener("load", () => {
                 this.toDelete = true;                           // remove enemy from array when left border is reached.
                 score++;
             }
+            if(this.x > player.x){
+                performance = distScore++ / score;              // calculates a "danger score" - vigor of the play style.
+            }
         }
     };
 
     const handleEnemies = (deltaTime) => {
         if(enemyTimer > enemyInterval + Randomizer){
             enemies.push(new Enemy(canvasDom.width, canvasDom.height));
-            console.log(enemies);
+            //console.log(enemies);
             enemyTimer = 0; //Reset Timer
             Randomizer = Math.random() * 2000 + 200; //Reset Random Timer
         } else {
@@ -246,6 +257,9 @@ window.addEventListener("load", () => {
         context.fillStyle='#999';
         context.font='20px sans-serif';
         context.fillText("score: " + score, 25, 50);
+        context.fillStyle='#999';
+        context.font='12px sans-serif';
+        context.fillText("performance: " + parseInt(performance, 10), 25, 75);
         
     };
 
@@ -282,6 +296,8 @@ window.addEventListener("load", () => {
 
 
     </script>
+
+    <p>About Performance: Low is better! The less time you take to pass a monster, the better! Takes all passes into the calc.</p>
 </body>
 
 </html>
