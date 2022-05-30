@@ -39,6 +39,8 @@ window.addEventListener("load", () => {
     canvasDom.width = 800;
     canvasDom.height = 600;
     let enemies = [];
+    let score = 0;
+    let gameOver = false;
 
     class InputHandler {
         constructor(){
@@ -100,10 +102,24 @@ window.addEventListener("load", () => {
         draw(context){
             //context.fillStyle = "rgba(90, 60, 90, 0.0)";
             //context.fillRect(this.x, this.y, this.width, this.height);
+
+            // context.beginPath();
+            // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/4, 0, Math.PI * 2);
+            // context.stroke();
+
             context.drawImage(this.image, this.frameX* this.width, this.frameY* this.height, this.width, this.height,
             this.x, this.y, this.width, this.height);
         }
-        update(input, deltaTime){
+        update(input, deltaTime, enemies){
+            //collision detection:
+                enemies.forEach(enemy => {
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < enemy.width/2 - 20 + this.width/2 - 40){
+                        gameOver = true;
+                    }
+                });
             //Sprite Animation:
             if (this.frameTimer > this.frameInterval){
                 if(this.frameX >= this.maxFrame) this.frameX = 0;
@@ -179,12 +195,17 @@ window.addEventListener("load", () => {
             this.y = this.gameHeight - this.height;
             this.frameX = 0;
             this.maxFrame = 5;
-            this.fps = 20;
+            this.fps = 21;
             this.frameTimer = 0;
             this.frameInterval = 1000/this.fps;
             this.speed = 8;
+            this.toDelete = false;
         }
         draw(context){
+            // context.beginPath();
+            // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+            // context.stroke();
+
             context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height,
             this.x, this.y, this.width, this.height);
         }
@@ -194,16 +215,21 @@ window.addEventListener("load", () => {
                 else this.frameX++;
                 this.frameTimer = 0;
             } else {
-                this.frameTimer += deltaTime;
+                this.frameTimer += 16;
             }
 
-            this.x -= this.speed;
+            this.x -= this.speed;                               // will move it to the left with it's speed.
+            if (this.x < 0 - this.width){
+                this.toDelete = true;                           // remove enemy from array when left border is reached.
+                score++;
+            }
         }
     };
 
     const handleEnemies = (deltaTime) => {
         if(enemyTimer > enemyInterval + Randomizer){
             enemies.push(new Enemy(canvasDom.width, canvasDom.height));
+            console.log(enemies);
             enemyTimer = 0; //Reset Timer
             Randomizer = Math.random() * 2000 + 200; //Reset Random Timer
         } else {
@@ -212,11 +238,15 @@ window.addEventListener("load", () => {
         enemies.forEach(enemy => {
             enemy.draw(ctx);
             enemy.update();
-        })
+        });
+        enemies = enemies.filter(enemy => !enemy.toDelete); //Filter will only add enemies to the array, that are not "toDelete".
     };
 
-    const displayStatusText = () => {
-
+    const displayStatusText = (context) => {
+        context.fillStyle='#999';
+        context.font='20px sans-serif';
+        context.fillText("score: " + score, 25, 50);
+        
     };
 
     const input = new InputHandler();
@@ -225,11 +255,11 @@ window.addEventListener("load", () => {
 
     let lastTime = 0;
     let enemyTimer = 0;
-    let enemyInterval = 200; //Add new Enemy every ...ms
+    let enemyInterval = 800; //Add new Enemy every ...ms
     let Randomizer = Math.random() * 2000 + 200;
 
     const animate = (timeStamp) => {
-        const deltaTime = timeStamp - lastTime; // delta is the difference of time passed. In FPS Time.
+        const deltaTime = timeStamp - lastTime; // ∆ delta is the difference of time passed. In FPS Time.
         lastTime = timeStamp;
         //console.log(deltaTime); //See, when you have 60FPS, there is a new frame about every 16ms.
         ctx.clearRect(0, 0, canvasDom.width, canvasDom.height); // clear all frames from canvas that were before current. see what it's like without it!
@@ -238,11 +268,12 @@ window.addEventListener("load", () => {
         background.update();
 
         player.draw(ctx);
-        player.update(input,deltaTime);
+        player.update(input,deltaTime, enemies);
 
-        //handleEnemies(deltaTime);
+        handleEnemies(deltaTime);
+        displayStatusText(ctx);
 
-        requestAnimationFrame(animate);
+        if(!gameOver) requestAnimationFrame(animate);
     };
 
     animate(0);
