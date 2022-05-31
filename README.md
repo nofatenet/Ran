@@ -9,3 +9,4 @@ https://ran-ran.netlify.app/
 
 About Performance: Low is better! The less time you take to pass a monster, the better! Takes all passes into the calc.
 
+![title](ran-screenshot.png)
