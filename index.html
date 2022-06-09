@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,294 +8,366 @@
     <title>Ran</title>
 
     <style>
-
-        body{
+        body {
             background-color: #000;
         }
-        #canvas1{
+        
+        #canvas1 {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             border: 2px solid #333;
         }
-        #playerImage, #backgroundImage, #enemyImage{
+        
+        #playerImage,
+        #backgroundImage,
+        #enemyImage,
+        #batImage {
             display: none;
         }
-        p{
+        
+        p {
             font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
             color: #999;
             font-size: 10px;
         }
-
     </style>
 
 </head>
+
 <body>
+    <!-- <audio id="audio" controls>
+        <source src="hiding.mp3" type="audio/mpeg">
+    </audio> -->
     <canvas id="canvas1"></canvas>
     <img id="playerImage" src="./player_ft.png">
     <img id="backgroundImage" src="./background_ft.png">
     <img id="enemyImage" src="./enemy_ft.png">
+    <img id="batImage" src="./bat3.png">
 
     <script>
         // Repo: https://github.com/nofatenet/Ran/
 
-window.addEventListener("load", () => {
-    const canvasDom = document.querySelector("#canvas1");
-    const ctx = canvasDom.getContext('2d');
-    canvasDom.width = 800;
-    canvasDom.height = 600;
-    let enemies = [];
-    let score = 0;
-    let distScore = 0;
-    let performance = 0;
-    let gameOver = false;
+        window.addEventListener("load", () => {
+            const canvasDom = document.querySelector("#canvas1");
+            const ctx = canvasDom.getContext('2d');
+            canvasDom.width = 800;
+            canvasDom.height = 600;
+            let enemies = [];
+            let bats = [];
+            let score = 0;
+            let distScore = 0;
+            let performance = 0;
+            let gameOver = false;
+            let bgSpeed = 3;
+            let music = document.getElementById("audio");
 
-    class InputHandler {
-        constructor(){
-            this.keys = []; //have an array of keys, so multiple keys can be pressed at same time
-            
-            window.addEventListener("keydown", (evt) => {
-                if (
-                    (
-                        evt.key === "ArrowDown" ||
-                        evt.key === "ArrowUp"   ||
-                        evt.key === "ArrowLeft" ||
-                        evt.key === "ArrowRight"
-                    )
-                    && this.keys.indexOf(evt.key) === -1)
-                {
-                    this.keys.push(evt.key) //add to array ... if not already present
+            class InputHandler {
+                constructor() {
+                    this.keys = []; //have an array of keys, so multiple keys can be pressed at same time
+
+                    window.addEventListener("keydown", (evt) => {
+                        if (
+                            (
+                                evt.key === "ArrowDown" ||
+                                evt.key === "ArrowUp" ||
+                                evt.key === "ArrowLeft" ||
+                                evt.key === "ArrowRight"
+                            ) &&
+                            this.keys.indexOf(evt.key) === -1) {
+                            this.keys.push(evt.key) //add to array ... if not already present
+                        };
+                        //console.log(evt.key, this.keys);
+                    });
+
+                    window.addEventListener("keyup", (evt) => {
+                        if (
+                            (
+                                evt.key === "ArrowDown" ||
+                                evt.key === "ArrowUp" ||
+                                evt.key === "ArrowLeft" ||
+                                evt.key === "ArrowRight"
+                            )
+                        ) {
+                            this.keys.splice(this.keys.indexOf(evt.key), 1) //remove from array
+                        };
+                        //console.log(evt.key, this.keys);
+                    });
+
                 };
-                //console.log(evt.key, this.keys);
-            });
 
-            window.addEventListener("keyup", (evt) => {
-                if (
-                    (
-                        evt.key === "ArrowDown" ||
-                        evt.key === "ArrowUp"   ||
-                        evt.key === "ArrowLeft" ||
-                        evt.key === "ArrowRight"
-                    )
-                )
-                {
-                    this.keys.splice(this.keys.indexOf(evt.key), 1) //remove from array
-                };
-                //console.log(evt.key, this.keys);
-            });
+            };
 
-        };
+            class Player {
+                constructor(gameWidth, gameHeight) {
+                    this.gameWidth = gameWidth;
+                    this.gameHeight = gameHeight;
+                    this.width = 200;
+                    this.height = 216;
+                    this.x = 64;
+                    this.y = this.gameHeight - this.height;
+                    this.image = document.getElementById("playerImage");
+                    this.frameX = 0;
+                    this.frameY = 0;
+                    this.maxFrame = 7;
+                    this.fps = 14;
+                    this.frameTimer = 0;
+                    this.frameInterval = 1000 / this.fps;
+                    this.speed = 0;
+                    this.velocityY = 0;
+                    this.weight = 1;
+                }
+                draw(context) {
+                    //context.fillStyle = "rgba(90, 60, 90, 0.0)";
+                    //context.fillRect(this.x, this.y, this.width, this.height);
 
-    };
+                    // context.beginPath();
+                    // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/4, 0, Math.PI * 2);
+                    // context.stroke();
 
-    class Player {
-        constructor(gameWidth, gameHeight){
-            this.gameWidth = gameWidth;
-            this.gameHeight = gameHeight;
-            this.width = 200;
-            this.height = 216;
-            this.x = 64;
-            this.y = this.gameHeight - this.height;
-            this.image = document.getElementById("playerImage");
-            this.frameX = 0;
-            this.frameY = 0;
-            this.maxFrame = 7;
-            this.fps = 14;
-            this.frameTimer = 0;
-            this.frameInterval = 1000/this.fps;
-            this.speed = 0;
-            this.velocityY = 0;
-            this.weight = 1;
-        }
-        draw(context){
-            //context.fillStyle = "rgba(90, 60, 90, 0.0)";
-            //context.fillRect(this.x, this.y, this.width, this.height);
+                    context.drawImage(this.image, this.frameX * this.width, this.frameY * this.height, this.width, this.height,
+                        this.x, this.y, this.width, this.height);
+                }
+                update(input, deltaTime, enemies, bats) {
+                    //collision detection:
+                    enemies.forEach(enemy => {
+                        const dx = enemy.x - this.x;
+                        const dy = enemy.y - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < enemy.width / 2 - 20 + this.width / 2 - 40) {
+                            gameOver = true;
+                        }
+                    });
 
-            // context.beginPath();
-            // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/4, 0, Math.PI * 2);
-            // context.stroke();
-
-            context.drawImage(this.image, this.frameX* this.width, this.frameY* this.height, this.width, this.height,
-            this.x, this.y, this.width, this.height);
-        }
-        update(input, deltaTime, enemies){
-            //collision detection:
-                enemies.forEach(enemy => {
-                    const dx = enemy.x - this.x;
-                    const dy = enemy.y - this.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < enemy.width/2 - 20 + this.width/2 - 40){
-                        gameOver = true;
+                    //Sprite Animation:
+                    if (this.frameTimer > this.frameInterval) {
+                        if (this.frameX >= this.maxFrame) this.frameX = 0;
+                        else this.frameX++;
+                        this.frameTimer = 0;
+                    } else {
+                        this.frameTimer += deltaTime;
                     }
+
+                    // Controls:
+                    if (input.keys.indexOf("ArrowUp") > -1 && this.onGround()) {
+                        this.velocityY -= 23;
+                    } else if (input.keys.indexOf("ArrowRight") > -1) {
+                        this.speed = 5;
+                        // music.playbackRate += 0.005;
+                        // if (music.playbackRate > 2) music.playbackRate = 2;
+
+                    } else if (input.keys.indexOf("ArrowLeft") > -1) {
+                        this.speed = -5;
+                        // music.playbackRate -= 0.005;
+                        // if (music.playbackRate < 1) music.playbackRate = 1;
+
+                    } else {
+                        this.speed = 0;
+                    }
+
+                    // Game Area Limits:
+                    this.x += this.speed;
+                    if (this.x < 0) this.x = 0;
+                    else if (this.x > this.gameWidth - this.width) this.x = this.gameWidth - this.width;
+                    // Vertical:
+                    this.y += this.velocityY;
+                    if (!this.onGround()) {
+                        this.velocityY += this.weight;
+                        this.frameY = 1;
+                    } else {
+                        this.velocityY = 0;
+                        this.frameY = 0;
+                    }
+                    //Stop from falling though the Ground:
+                    if (this.y > this.gameHeight - this.height) this.y = this.gameHeight - this.height;
+                }
+                onGround() {
+                    return this.y >= this.gameHeight - this.height;
+                }
+
+            };
+
+            class Background {
+                constructor(gameWidth, gameHeight) {
+                    this.gameWidth = gameWidth;
+                    this.gameHeight = gameHeight;
+                    this.image = document.getElementById("backgroundImage");
+                    this.x = 0;
+                    this.y = 0;
+                    this.width = 2400;
+                    this.height = 720;
+                    this.scrollSpeed = bgSpeed;
+                }
+                draw(context) {
+                    context.drawImage(this.image, this.x, this.y, this.width, this.height);
+                    context.drawImage(this.image, this.x + this.width, this.y, this.width, this.height);
+                }
+                update() {
+                    this.x -= bgSpeed;
+
+                    if (this.x < 0 - this.width) this.x = 0; //reset the image for infinite scroll...
+                }
+            };
+
+            class Enemy {
+                constructor(gameWidth, gameHeight) {
+                    this.gameWidth = gameWidth;
+                    this.gameHeight = gameHeight;
+                    this.width = 160;
+                    this.height = 119;
+                    this.image = document.getElementById("enemyImage");
+                    this.x = this.gameWidth;
+                    this.y = this.gameHeight - this.height;
+                    this.frameX = 0;
+                    this.maxFrame = 5;
+                    this.fps = 21;
+                    this.frameTimer = 0;
+                    this.frameInterval = 1000 / this.fps;
+                    this.speed = 8;
+                    this.toDelete = false;
+                }
+                draw(context) {
+                    // context.beginPath();
+                    // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+                    // context.stroke();
+
+                    context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height,
+                        this.x, this.y, this.width, this.height);
+                }
+                update(deltaTime) {
+                    if (this.frameTimer > this.frameInterval) {
+                        if (this.frameX >= this.maxFrame) this.frameX = 0;
+                        else this.frameX++;
+                        this.frameTimer = 0;
+                    } else {
+                        this.frameTimer += 16;
+                    }
+
+                    this.x -= this.speed; // will move it to the left with it's speed.
+                    if (this.x < 0 - this.width) {
+                        this.toDelete = true; // remove enemy from array when left border is reached.
+                        score++;
+                    }
+                    if (this.x > player.x) {
+                        //calculates a "danger score" - vigor of the play style.
+                        performance = distScore++/ score;
+                    }
+                }
+            };
+
+            class Bat {
+                constructor(gameWidth, gameHeight) {
+                    this.gameWidth = gameWidth;
+                    this.gameHeight = gameHeight;
+                    this.width = 64;
+                    this.height = 64;
+                    this.image = document.getElementById("batImage");
+                    this.x = this.gameWidth;
+                    this.y = this.gameHeight - this.height;
+                    this.fps = 21;
+                    this.speed = 10;
+                    this.toDelete = false;
+                }
+                draw(context) {
+
+                    context.drawImage(this.image, this.x, this.y - 200, this.width, this.height);
+                }
+                update() {
+
+                    this.x -= this.speed; // will move it to the left with it's speed.
+                    if (this.x < 0 - this.width) {
+                        this.toDelete = true; // remove enemy from array when left border is reached.
+                        score++;
+                    }
+                }
+            };
+
+            const handleEnemies = (deltaTime) => {
+                if (enemyTimer > enemyInterval + Randomizer) {
+                    enemies.push(new Enemy(canvasDom.width, canvasDom.height));
+                    //console.log(enemies);
+                    enemyTimer = 0; //Reset Timer
+                    Randomizer = Math.random() * 2000 + 200; //Reset Random Timer
+                } else {
+                    enemyTimer += deltaTime;
+                }
+                enemies.forEach(enemy => {
+                    enemy.draw(ctx);
+                    enemy.update();
                 });
-            //Sprite Animation:
-            if (this.frameTimer > this.frameInterval){
-                if(this.frameX >= this.maxFrame) this.frameX = 0;
-                else this.frameX ++;
-                this.frameTimer = 0;
-            } else {
-                this.frameTimer += deltaTime;
-            }
+                enemies = enemies.filter(enemy => !enemy.toDelete); //Filter will only add enemies to the array, that are not "toDelete".
+            };
 
+            const handleBats = (deltaTime) => {
+                if (batTimer > batInterval + Randomizer) {
+                    bats.push(new Bat(canvasDom.width, canvasDom.height));
+                    //console.log(bats);
+                    batTimer = 0; //Reset Timer
+                    Randomizer = Math.random() * 2000 + 200; //Reset Random Timer
+                } else {
+                    batTimer += deltaTime;
+                }
+                bats.forEach(bat => {
+                    bat.draw(ctx);
+                    bat.update();
+                });
+                bats = bats.filter(bat => !bat.toDelete); //Filter will only add enemies to the array, that are not "toDelete".
+            };
 
+            const displayStatusText = (context) => {
+                context.fillStyle = '#999';
+                context.font = '20px sans-serif';
+                context.fillText("score: " + score, 25, 50);
+                context.fillStyle = '#777';
+                context.font = '12px sans-serif';
+                context.fillText("performance: " + parseInt(performance, 10), 25, 75);
+                context.font = '12px sans-serif';
+                context.fillText("running speed: " + bgSpeed + " km/h", 25, 100);
 
-            // Controls:
-            if (input.keys.indexOf("ArrowRight") > -1) {
-                this.speed = 5;
-            } else if (input.keys.indexOf("ArrowLeft") > -1) {
-                this.speed = -5;
-            } else if (input.keys.indexOf("ArrowUp") > -1 && this.onGround()) {
-                this.velocityY -= 23;
-            } else {
-                this.speed = 0;
-            }
-            // Game Area Limits:
-            this.x += this.speed;
-            if (this.x < 0) this.x = 0;
-            else if (this.x > this.gameWidth - this.width) this.x = this.gameWidth - this.width;
-            // Vertical:
-            this.y += this.velocityY;
-            if (!this.onGround()) {
-                this.velocityY += this.weight;
-                this.frameY = 1;
-            } else {
-                this.velocityY = 0;
-                this.frameY = 0;
-            }
-            //Stop from falling though the Ground:
-            if (this.y > this.gameHeight - this.height) this.y = this.gameHeight - this.height;
-        }
-        onGround(){
-            return this.y >= this.gameHeight - this.height;
-        }
-    };
+            };
 
-    class Background {
-        constructor(gameWidth, gameHeight){
-            this.gameWidth = gameWidth;
-            this.gameHeight = gameHeight;
-            this.image = document.getElementById("backgroundImage");
-            this.x = 0;
-            this.y = 0;
-            this.width = 2400;
-            this.height = 720;
-            this.scrollSpeed = 4;
-        }
-        draw(context){
-            context.drawImage(this.image, this.x, this.y, this.width, this.height);
-            context.drawImage(this.image, this.x + this.width, this.y, this.width, this.height);
-        }
-        update(){
-            this.x -= this.scrollSpeed;
+            const input = new InputHandler();
+            const player = new Player(canvasDom.width, canvasDom.height);
+            const background = new Background(canvasDom.width, canvasDom.height);
 
-            if(this.x < 0 - this.width) this.x = 0; //reset the image for infinite scroll...
-        }
-    };
+            let lastTime = 0;
+            let enemyTimer = 0;
+            let enemyInterval = 800; //Add new Enemy every ...ms
+            let batTimer = 0;
+            let batInterval = 1200;
+            let Randomizer = Math.random() * 2000 + 200;
 
-    class Enemy {
-        constructor(gameWidth, gameHeight){
-            this.gameWidth = gameWidth;
-            this.gameHeight = gameHeight;
-            this.width = 160;
-            this.height = 119;
-            this.image = document.getElementById("enemyImage");
-            this.x = this.gameWidth;
-            this.y = this.gameHeight - this.height;
-            this.frameX = 0;
-            this.maxFrame = 5;
-            this.fps = 21;
-            this.frameTimer = 0;
-            this.frameInterval = 1000/this.fps;
-            this.speed = 8;
-            this.toDelete = false;
-        }
-        draw(context){
-            // context.beginPath();
-            // context.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
-            // context.stroke();
+            const animate = (timeStamp) => {
+                const deltaTime = timeStamp - lastTime; // ∆ delta is the difference of time passed. In FPS Time.
+                lastTime = timeStamp;
+                //console.log(deltaTime); //See, when you have 60FPS, there is a new frame about every 16ms.
+                ctx.clearRect(0, 0, canvasDom.width, canvasDom.height); // clear all frames from canvas that were before current. see what it's like without it!
 
-            context.drawImage(this.image, this.frameX * this.width, 0, this.width, this.height,
-            this.x, this.y, this.width, this.height);
-        }
-        update(deltaTime){
-            if (this.frameTimer > this.frameInterval){
-                if(this.frameX >= this.maxFrame) this.frameX = 0;
-                else this.frameX++;
-                this.frameTimer = 0;
-            } else {
-                this.frameTimer += 16;
-            }
+                background.draw(ctx);
+                background.update();
 
-            this.x -= this.speed;                               // will move it to the left with it's speed.
-            if (this.x < 0 - this.width){
-                this.toDelete = true;                           // remove enemy from array when left border is reached.
-                score++;
-            }
-            if(this.x > player.x){
-                performance = distScore++ / score;              // calculates a "danger score" - vigor of the play style.
-            }
-        }
-    };
+                player.draw(ctx);
+                player.update(input, deltaTime, enemies, bats);
 
-    const handleEnemies = (deltaTime) => {
-        if(enemyTimer > enemyInterval + Randomizer){
-            enemies.push(new Enemy(canvasDom.width, canvasDom.height));
-            //console.log(enemies);
-            enemyTimer = 0; //Reset Timer
-            Randomizer = Math.random() * 2000 + 200; //Reset Random Timer
-        } else {
-            enemyTimer += deltaTime;
-        }
-        enemies.forEach(enemy => {
-            enemy.draw(ctx);
-            enemy.update();
+                handleEnemies(deltaTime);
+                handleBats(deltaTime);
+
+                displayStatusText(ctx);
+
+                // music.play();
+
+                //bgSpeed:
+                bgSpeed = parseInt(player.x / 66 + 3, 10);
+                //console.log(player.x);
+                //console.log("Speed: ", bgSpeed);
+
+                if (!gameOver) requestAnimationFrame(animate);
+            };
+
+            animate(0);
+
         });
-        enemies = enemies.filter(enemy => !enemy.toDelete); //Filter will only add enemies to the array, that are not "toDelete".
-    };
-
-    const displayStatusText = (context) => {
-        context.fillStyle='#999';
-        context.font='20px sans-serif';
-        context.fillText("score: " + score, 25, 50);
-        context.fillStyle='#999';
-        context.font='12px sans-serif';
-        context.fillText("performance: " + parseInt(performance, 10), 25, 75);
-        
-    };
-
-    const input = new InputHandler();
-    const player = new Player(canvasDom.width, canvasDom.height);
-    const background = new Background(canvasDom.width, canvasDom.height);
-
-    let lastTime = 0;
-    let enemyTimer = 0;
-    let enemyInterval = 800; //Add new Enemy every ...ms
-    let Randomizer = Math.random() * 2000 + 200;
-
-    const animate = (timeStamp) => {
-        const deltaTime = timeStamp - lastTime; // ∆ delta is the difference of time passed. In FPS Time.
-        lastTime = timeStamp;
-        //console.log(deltaTime); //See, when you have 60FPS, there is a new frame about every 16ms.
-        ctx.clearRect(0, 0, canvasDom.width, canvasDom.height); // clear all frames from canvas that were before current. see what it's like without it!
-        
-        background.draw(ctx);
-        background.update();
-
-        player.draw(ctx);
-        player.update(input,deltaTime, enemies);
-
-        handleEnemies(deltaTime);
-        displayStatusText(ctx);
-
-        if(!gameOver) requestAnimationFrame(animate);
-    };
-
-    animate(0);
-
-});
-
-
     </script>
 
     <p>About Performance: Low is better! The less time you take to pass a monster, the better! Takes all passes into the calc.</p>
